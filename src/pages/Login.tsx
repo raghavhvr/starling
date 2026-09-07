@@ -115,24 +115,6 @@ const Login = () => {
           </button>
         </div>
 
-        {/* Demo credentials */}
-        <div className="border border-dashed border-border p-3 text-center space-y-1">
-          <p className="font-data text-[9px] text-muted-foreground tracking-[0.2em] uppercase">
-            Demo Admin
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setEmail("admin@starling.demo");
-              setPassword("Maggi2026!");
-              setIsSignUp(false);
-            }}
-            className="font-data text-[10px] text-primary hover:underline"
-          >
-            admin@starling.demo · Maggi2026!
-          </button>
-        </div>
-
         {/* Powered by WPP */}
         <div className="flex items-center justify-center gap-2 pt-1">
           <span className="font-data text-[8px] text-muted-foreground tracking-[0.2em]">
