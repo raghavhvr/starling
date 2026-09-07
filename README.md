@@ -21,21 +21,22 @@ npm run dev
 
 Dev server runs at http://localhost:8080.
 
-## Deploying to Cloudflare Pages
+## Deploying to Cloudflare (Workers static assets)
+
+The repo ships a `wrangler.jsonc` that deploys the built app as Cloudflare Workers static assets, with SPA fallback (`not_found_handling: single-page-application`) so deep links like `/measurement` work on refresh.
 
 1. Push this repo to GitHub.
-2. In the Cloudflare dashboard: **Workers & Pages → Create → Pages → Connect to Git** and select the repo.
+2. In the Cloudflare dashboard: **Workers & Pages → Create → Import a repository** and select the repo.
 3. Build settings:
-   - **Framework preset**: Vite (or None)
    - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-4. **Environment variables** (Production & Preview):
+   - **Deploy command**: `npx wrangler deploy`
+4. **Build variables**:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_PROJECT_ID`
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
-5. Deploy. SPA routing is handled by `public/_redirects` (`/* → /index.html 200`), so deep links like `/measurement` work on refresh.
+5. Deploy, then add the deployed URL to Supabase → Authentication → URL Configuration so sign-in redirects work.
 
-To deploy from the CLI instead: `npm run build && npx wrangler pages deploy dist`.
+To deploy from the CLI instead: `npm run build && npx wrangler deploy`.
 
 ## Data & scripts
 
