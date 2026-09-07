@@ -1,0 +1,1 @@
+ALTER TABLE public.creators ADD CONSTRAINT creators_handle_unique UNIQUE (handle);

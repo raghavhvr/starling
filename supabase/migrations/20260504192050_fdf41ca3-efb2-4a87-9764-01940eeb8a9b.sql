@@ -1,0 +1,1 @@
+DELETE FROM public.virlo_cache WHERE endpoint LIKE 'tracking_%';

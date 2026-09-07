@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,400;1,9..144,500;1,9..144,600;1,9..144,700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 30% 99%;
+    --foreground: 26 20% 24%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 26 20% 24%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 26 20% 24%;
+
+    --primary: 352 88% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 18% 96%;
+    --secondary-foreground: 26 20% 24%;
+
+    --muted: 30 14% 94%;
+    --muted-foreground: 26 10% 46%;
+
+    --accent: 42 95% 44%;
+    --accent-foreground: 26 20% 24%;
+
+    --destructive: 0 78% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 28 14% 90%;
+    --input: 28 14% 90%;
+    --ring: 352 88% 47%;
+
+    --radius: 14px;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 26 12% 38%;
+    --sidebar-primary: 352 88% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 352 85% 96%;
+    --sidebar-accent-foreground: 26 20% 24%;
+    --sidebar-border: 28 14% 91%;
+    --sidebar-ring: 352 88% 47%;
+
+    /* Custom tokens — Nestlé product UI: white ground, vivid red, warm brown ink, Maggi amber */
+    --ink: 26 20% 24%;
+    --red: 352 88% 47%;
+    --gold: 42 95% 44%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 30 18% 97%;
+    --surface-3: 30 14% 94%;
+    --text-primary: 26 20% 24%;
+    --text-secondary: 26 10% 46%;
+    --text-tertiary: 26 8% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fraunces', serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'Inter', sans-serif;
+  }
+
+
+  /* Date inputs: force dark color scheme so calendar picker is visible */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    color-scheme: light;
+  }
+}
+
+/* Film grain overlay */
+.film-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.02;
+  mix-blend-mode: overlay;
+}
+
+/* Utility classes */
+.font-display {
+  font-family: 'Fraunces', serif;
+}
+
+.font-ui {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-data {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+}
+
+/* Radial hero glows — soft red + Maggi yellow warmth on white */
+.hero-glow-red {
+  background: radial-gradient(ellipse 600px 400px at 30% 40%, hsl(352 90% 50% / 0.05), transparent);
+}
+
+.hero-glow-gold {
+  background: radial-gradient(ellipse 400px 300px at 80% 30%, hsl(46 95% 52% / 0.10), transparent);
+}

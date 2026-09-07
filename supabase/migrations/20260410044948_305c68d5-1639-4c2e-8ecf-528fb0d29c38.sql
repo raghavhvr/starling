@@ -1,0 +1,2 @@
+UPDATE creators SET avatar_url = 'https://woruxhvflmelonpjcilh.supabase.co/storage/v1/object/public/avatars/hudabeauty.jpg' WHERE id = 'e959f785-25e2-44f0-b75d-a84e09c8b41c';
+UPDATE creators SET avatar_url = 'https://woruxhvflmelonpjcilh.supabase.co/storage/v1/object/public/avatars/saraaalwari.jpg' WHERE id = '87d12591-84df-45a5-a460-a0678745d1b0';

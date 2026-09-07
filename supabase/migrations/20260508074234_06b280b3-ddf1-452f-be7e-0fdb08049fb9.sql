@@ -1,0 +1,1 @@
+UPDATE campaigns SET name = 'Who is Your Yellow' WHERE id = '5b1f4533-e870-467b-b807-d47208a7e0d7';

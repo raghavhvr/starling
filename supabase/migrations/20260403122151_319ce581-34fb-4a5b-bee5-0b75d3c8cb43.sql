@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS idx_creator_posts_creator_shortcode ON public.creator_posts (creator_id, shortcode);

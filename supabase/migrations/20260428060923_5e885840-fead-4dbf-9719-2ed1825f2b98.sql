@@ -1,0 +1,1 @@
+DELETE FROM public.virlo_cache WHERE endpoint IN ('orbit_videos','orbit_get') AND (payload::text LIKE '%"videos":[]%' OR payload::text LIKE '%"status":"queued"%' OR payload::text LIKE '%"status":"processing"%');
