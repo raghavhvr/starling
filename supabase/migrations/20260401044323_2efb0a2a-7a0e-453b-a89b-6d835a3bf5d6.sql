@@ -1,3 +1,8 @@
+-- Idempotency guard: the previous migration created an earlier version of
+-- profiles + the signup trigger; this migration re-defines both.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
