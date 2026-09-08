@@ -125,25 +125,67 @@ async function queryInfluencerData(supabase: any, query_type: string, params: an
         .limit(params.limit || 20);
       return data || [];
     }
+    case "get_campaign": {
+      let q = supabase.from("campaigns").select("*");
+      if (params.name) q = q.ilike("name", `%${params.name}%`);
+      if (params.status) q = q.eq("status", params.status);
+      const { data: camps } = await q.order("created_at", { ascending: false }).limit(params.limit || 3);
+      if (!camps?.length) return [];
+      const { data: roster } = await supabase
+        .from("campaign_creators")
+        .select("*, creators(name, handle, followers, engagement_rate, country, cluster, brand, roi, soi_score)")
+        .in("campaign_id", camps.map((c: any) => c.id));
+      const rosterIds = (roster || []).map((r: any) => r.id);
+      const { data: deliverables } = rosterIds.length
+        ? await supabase.from("campaign_deliverables").select("*").in("campaign_creator_id", rosterIds)
+        : { data: [] };
+      return camps.map((c: any) => {
+        const cRoster = (roster || []).filter((r: any) => r.campaign_id === c.id);
+        const cRosterIds = new Set(cRoster.map((r: any) => r.id));
+        const cDeliverables = (deliverables || []).filter((d: any) => cRosterIds.has(d.campaign_creator_id));
+        return {
+          ...c,
+          spend_utilisation_pct: c.budget ? Math.round(((c.spent || 0) / c.budget) * 100) : null,
+          roster: cRoster,
+          deliverables: cDeliverables,
+          deliverables_summary: {
+            total: cDeliverables.length,
+            by_status: cDeliverables.reduce((acc: any, d: any) => ({ ...acc, [d.status]: (acc[d.status] || 0) + 1 }), {}),
+          },
+        };
+      });
+    }
     default:
       return { error: "Unknown query type" };
   }
 }
 
+// Media analytics is only offered as a tool when the BigQuery credentials
+// exist on this project; otherwise the model is told it is not connected.
+const BQ_ENABLED = !!Deno.env.get("BIGQUERY_SERVICE_ACCOUNT_KEY");
+
 // ── Parallel tool execution ──
+// A failing tool must not fail the whole request: the error is returned as
+// the tool result so the model can explain it instead of the chat dying.
 async function executeToolCalls(toolCalls: any[], supabase: any): Promise<any[]> {
   const results = await Promise.all(
     toolCalls.map(async (toolCall) => {
-      const args = JSON.parse(toolCall.function.arguments);
       let result: any;
-      if (toolCall.function.name === "run_bigquery_query") {
-        console.log("Executing BigQuery:", args.query);
-        result = await runBigQuery(args.query);
-      } else if (toolCall.function.name === "query_influencer_data") {
-        console.log("Querying influencer data:", args.query_type, args.params);
-        result = await queryInfluencerData(supabase, args.query_type, args.params);
-      } else {
-        result = { error: `Unknown tool: ${toolCall.function.name}` };
+      try {
+        const args = JSON.parse(toolCall.function.arguments || "{}");
+        if (toolCall.function.name === "run_bigquery_query") {
+          console.log("Executing BigQuery:", args.query);
+          result = await runBigQuery(args.query);
+        } else if (toolCall.function.name === "query_influencer_data") {
+          console.log("Querying influencer data:", args.query_type, args.params);
+          result = await queryInfluencerData(supabase, args.query_type, args.params);
+        } else {
+          result = { error: `Unknown tool: ${toolCall.function.name}` };
+        }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(`Tool ${toolCall.function.name} failed:`, message);
+        result = { error: `Tool ${toolCall.function.name} failed: ${message}` };
       }
       return {
         role: "tool",
@@ -166,12 +208,12 @@ const tools = [
         properties: {
           query_type: {
             type: "string",
-            enum: ["get_creator", "get_creator_posts", "get_creator_collaborations", "get_creator_platforms", "search_creators", "get_campaign_creators", "list_campaigns"],
+            enum: ["get_creator", "get_creator_posts", "get_creator_collaborations", "get_creator_platforms", "search_creators", "get_campaign_creators", "list_campaigns", "get_campaign"],
             description: "Type of query to run",
           },
           params: {
             type: "object",
-            description: "Parameters for the query. For get_creator: {name}. For get_creator_posts/collaborations/platforms/campaign_creators: {creator_id, limit?}. For search_creators: {cluster?, brand?, country?, min_followers?, min_engagement?, status?, name?, limit?}. For list_campaigns: {limit?}.",
+            description: "Parameters for the query. For get_creator: {name}. For get_creator_posts/collaborations/platforms/campaign_creators: {creator_id, limit?}. For search_creators: {cluster?, brand?, country?, min_followers?, min_engagement?, status?, name?, limit?}. For list_campaigns: {limit?}. For get_campaign (full detail: budget, spent, status, dates, KPIs, notes/results, roster with creator stats, deliverables and their statuses): {name?, status?, limit?}.",
           },
         },
         required: ["query_type", "params"],
@@ -216,7 +258,7 @@ serve(async (req) => {
 
     let bqSchemaInfo = "";
     try {
-      bqSchemaInfo = await fetchBQSchema();
+      bqSchemaInfo = BQ_ENABLED ? await fetchBQSchema() : "Not connected in this deployment";
     } catch {
       bqSchemaInfo = "BigQuery schema unavailable";
     }
@@ -241,11 +283,12 @@ ${bqSchemaInfo}
 TOOLS AVAILABLE:
 - query_influencer_data: Query the influencer database (creators, posts, collaborations, campaigns)
 - run_bigquery_query: Query BigQuery for media analytics data
-
+${BQ_ENABLED ? "" : "\nNOTE: Media Analytics (BigQuery) is NOT connected in this deployment — the run_bigquery_query tool is unavailable. Never attempt media spend / BigQuery queries. If asked about media spend or paid-media history, say media analytics isn't connected yet and answer what you can from the influencer database.\n"}
 INSTRUCTIONS:
 - When asked about a specific influencer, first search for them using query_influencer_data with query_type "get_creator"
 - Then fetch their posts, collaborations, and platform data for a complete picture
-- When asked about media spend, campaigns performance metrics, use BigQuery
+- CAMPAIGN QUESTIONS (budget, spent, utilisation, status, flight dates, KPIs, results, roster, deliverables): use query_influencer_data → get_campaign with the campaign name (or status: "active"/"planned"/"completed"). Completed campaigns carry their final results in kpis/notes. This is the source of truth for influencer campaign spend — NOT BigQuery.
+- BigQuery (when connected) is only for paid-media ad-line history: media spend by brand/market, impressions, clicks, CPM/CPV across Nestlé's paid campaigns
 - **CROSS-REFERENCING CREATORS WITH BIGQUERY**: When a user asks what a creator has done with Nestlé, or their past campaigns/spend:
   1. First get the creator's name and handle from the influencer database (query_influencer_data → get_creator).
   2. **CRITICAL — name matching**: Ad/campaign names in BigQuery rarely contain the creator name with a space. They use variants like \`yaraaziz\`, \`yara-aziz\`, \`yara_aziz\`, \`yara.aziz\`, or just the handle. You MUST search for ALL of these variants, plus the handle (without @), plus the first name alone, across Campaign, Ad_Name, Ad_Group_Name, AND Account_Name. Use REGEXP_CONTAINS with a single pattern to cover them all.
@@ -280,7 +323,7 @@ FOLLOW_UP: [specific follow-up question]`;
       
       const aiResponse = await llmChat({
         messages: conversationMessages,
-        tools,
+        tools: BQ_ENABLED ? tools : tools.filter((t) => t.function.name !== "run_bigquery_query"),
         tool_choice: isLastChance ? "none" : "auto",
         ...(isLastChance ? { stream: true } : {}),
       });
