@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { assertLLMConfigured, llmChat } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,8 +69,7 @@ serve(async (req) => {
 
   try {
     const { creator, analysis } = await req.json();
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    assertLLMConfigured();
 
     const systemPrompt = `You are a senior Nestlé MENA influencer strategist. From the creator analysis JSON, extract 4 KEY INSIGHTS.
 Each insight = a sharp observation about the creator's audience behavior, content patterns, or engagement drivers (cite real evidence: comment quotes, view counts, formats).
@@ -81,17 +81,12 @@ Insights should be 2-3 sentences, specific, with numbers/quotes. Tips should be 
 
     const userPrompt = `Creator: ${creator?.name || "Unknown"} (@${creator?.handle || ""}) on ${creator?.platform || ""}\n\nAnalysis JSON:\n${JSON.stringify(analysis).slice(0, 12000)}`;
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const r = await llmChat({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
     });
 
     if (!r.ok) {

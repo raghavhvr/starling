@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { assertLLMConfigured, llmChat, LLM_MODEL_LITE } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,8 +12,7 @@ serve(async (req) => {
 
   try {
     const { keyword, brand, existingKeywords } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    assertLLMConfigured();
 
     const systemPrompt = `You are a marketing audience strategist for Nestlé's food and beverage brands in the MENA region.
 Given a raw audience keyword typed by a user, you must:
@@ -33,20 +33,13 @@ Respond ONLY with a JSON object, no markdown:
   ]
 }`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Keyword: "${keyword}"` },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const response = await llmChat({
+      model: LLM_MODEL_LITE,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Keyword: "${keyword}"` },
+      ],
+      response_format: { type: "json_object" },
     });
 
     if (!response.ok) {

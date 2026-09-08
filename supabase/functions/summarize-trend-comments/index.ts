@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { assertLLMConfigured, llmChat } from '../_shared/llm.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,9 +12,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+    try {
+      assertLLMConfigured()
+    } catch (e) {
+      return new Response(JSON.stringify({ error: (e as Error).message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -70,19 +72,11 @@ Provide a brief intelligence report with:
 
 Keep it under 300 words total. Be specific, cite actual comments where relevant.`
 
-    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
+    const aiResp = await llmChat({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
     })
 
     if (!aiResp.ok) {

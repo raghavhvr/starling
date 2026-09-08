@@ -3,6 +3,7 @@
 // 2. Calls existing virlo-proxy to spawn an Orbit and poll for videos
 // 3. Re-ranks Virlo creators by fit + scores trusted partners from local DB
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { assertLLMConfigured, llmChat } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +11,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -35,14 +35,7 @@ Respond ONLY with JSON, no prose.`;
 
   const user = JSON.stringify(brief);
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+  const res = await llmChat({
       messages: [
         { role: "system", content: sys },
         { role: "user", content: user },
@@ -73,7 +66,6 @@ Respond ONLY with JSON, no prose.`;
         },
       ],
       tool_choice: { type: "function", function: { name: "emit_match_plan" } },
-    }),
   });
 
   if (!res.ok) throw new Error(`AI keyword extract failed: ${res.status}`);
@@ -110,14 +102,7 @@ Return all candidates, ordered by score desc.`;
     country: c.data.country,
   }));
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+  const res = await llmChat({
       messages: [
         { role: "system", content: sys },
         {
@@ -160,7 +145,6 @@ Return all candidates, ordered by score desc.`;
         },
       ],
       tool_choice: { type: "function", function: { name: "rank" } },
-    }),
   });
 
   if (!res.ok) throw new Error(`AI ranking failed: ${res.status}`);
@@ -184,7 +168,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    assertLLMConfigured();
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     const { brief, action = "start", orbit_id } = await req.json() as {

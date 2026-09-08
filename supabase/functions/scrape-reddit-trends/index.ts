@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { assertLLMConfigured, llmChat, LLM_MODEL_LITE } from '../_shared/llm.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,9 +19,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+    try {
+      assertLLMConfigured()
+    } catch (e) {
+      return new Response(JSON.stringify({ error: (e as Error).message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -82,15 +84,9 @@ Deno.serve(async (req) => {
       text: (p.body || p.selftext || '').slice(0, 200),
     }))
 
-    // Use AI to extract beauty trends from the posts
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
+    // Use AI to extract food trends from the posts
+    const aiResponse = await llmChat({
+        model: LLM_MODEL_LITE,
         messages: [
           {
             role: 'system',
@@ -112,7 +108,6 @@ Respond ONLY with JSON, no markdown:
           },
         ],
         response_format: { type: 'json_object' },
-      }),
     })
 
     if (!aiResponse.ok) {

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { assertLLMConfigured, llmChat } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,9 +22,10 @@ serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not set" }), {
+    try {
+      assertLLMConfigured();
+    } catch (e) {
+      return new Response(JSON.stringify({ error: (e as Error).message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -63,24 +65,16 @@ Be SPECIFIC to this brand, market, audience, and the trending topics provided. R
     const userPrompt = `Here is the campaign brief:
 ${briefSummary}
 
-${trendsSummary ? `Here are the current trending topics in beauty/skincare:\n${trendsSummary}` : "No trending data available."}
+${trendsSummary ? `Here are the current trending topics in food & beverage:\n${trendsSummary}` : "No trending data available."}
 
 Generate 5 specific, actionable optimization suggestions for this campaign. Reference the actual trends and brief data. Return ONLY a JSON array, no markdown.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-      }),
+    const response = await llmChat({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
     });
 
     if (!response.ok) {
