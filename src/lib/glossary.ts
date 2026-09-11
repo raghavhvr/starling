@@ -35,6 +35,7 @@ export const GLOSSARY: Record<string, string> = {
 
 /** Convenience lookups used as title attributes. */
 export const HINTS = {
+  aiSuggestions: "Starter questions — Nestlé AI answers by querying the live roster, campaign and deliverable data.",
   trackedCreators: "Creators in the Starling roster matching the current filters.",
   shareOfInfluence: GLOSSARY.SOI,
   totalInvestment: GLOSSARY.INVESTMENT,

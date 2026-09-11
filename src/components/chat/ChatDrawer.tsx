@@ -1,22 +1,16 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, X, Sparkles, Users, BarChart3, TrendingUp } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { X, Sparkles } from "lucide-react";
 import { ChatInput } from "./ChatInput";
 import { ChatMessage } from "./ChatMessage";
-import { streamChat, type ChatMessage as ChatMsg } from "@/lib/chat-stream";
-import { toast } from "sonner";
-
-const suggestions = [
-  { icon: Users, label: "Top creators", query: "Who are the top 5 Nestlé roster creators by ROI?" },
-  { icon: BarChart3, label: "Campaign results", query: "How did the Maggi #MadeWithMaggi Ramadan Series perform?" },
-  { icon: TrendingUp, label: "Creator deep dive", query: "Tell me everything about Manal Al Alem" },
-  { icon: Sparkles, label: "NIDO Egypt fit", query: "Which Egypt creators are the best fit for NIDO Al Assassy?" },
-];
+import { ThinkingIndicator } from "./ThinkingIndicator";
+import { useStarlingChat, CHAT_SUGGESTIONS, displayContent } from "@/hooks/useStarlingChat";
 
 export function ChatDrawer() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const { messages, isStreaming, send, followUps } = useStarlingChat();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -31,51 +25,8 @@ export function ChatDrawer() {
     return () => window.removeEventListener("starling:open-chat", openChat);
   }, []);
 
-  const handleSend = useCallback(async (input: string) => {
-    const userMsg: ChatMsg = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsStreaming(true);
-
-    let assistantSoFar = "";
-    const upsertAssistant = (chunk: string) => {
-      assistantSoFar += chunk;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant") {
-          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-        }
-        return [...prev, { role: "assistant", content: assistantSoFar }];
-      });
-    };
-
-    try {
-      await streamChat({
-        messages: [...messages, userMsg],
-        onDelta: upsertAssistant,
-        onDone: () => setIsStreaming(false),
-        onError: (err) => {
-          setIsStreaming(false);
-          toast.error(err);
-        },
-      });
-    } catch {
-      setIsStreaming(false);
-      toast.error("Failed to send message");
-    }
-  }, [messages]);
-
-  // Extract follow-up suggestions from the latest assistant message
-  const followUps: string[] = [];
-  if (messages.length > 0) {
-    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-    if (lastAssistant) {
-      const lines = lastAssistant.content.split("\n");
-      for (const line of lines) {
-        const match = line.match(/^FOLLOW_UP:\s*(.+)/);
-        if (match) followUps.push(match[1].trim());
-      }
-    }
-  }
+  // The full-page Nestlé AI view already is the chat; no floating drawer there
+  if (pathname === "/ai") return null;
 
   return (
     <>
@@ -121,10 +72,10 @@ export function ChatDrawer() {
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {suggestions.map((s, i) => (
+                    {CHAT_SUGGESTIONS.slice(0, 4).map((s, i) => (
                       <button
                         key={s.label}
-                        onClick={() => handleSend(s.query)}
+                        onClick={() => send(s.query)}
                         className="flex items-start gap-2.5 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/30 hover:bg-secondary/50 animate-in fade-in slide-in-from-bottom-2 duration-300"
                         style={{ animationDelay: `${100 + i * 50}ms`, animationFillMode: "both" }}
                       >
@@ -143,16 +94,12 @@ export function ChatDrawer() {
                 {messages.map((msg, i) => (
                   <ChatMessage
                     key={i}
-                    message={{
-                      ...msg,
-                      // Strip FOLLOW_UP lines from display
-                      content: msg.role === "assistant"
-                        ? msg.content.replace(/^FOLLOW_UP:.*$/gm, "").trim()
-                        : msg.content,
-                    }}
+                    message={{ ...msg, content: displayContent(msg) }}
                     isStreaming={isStreaming && i === messages.length - 1 && msg.role === "assistant"}
                   />
                 ))}
+
+                {isStreaming && messages[messages.length - 1]?.role === "user" && <ThinkingIndicator />}
 
                 {/* Follow-up chips */}
                 {!isStreaming && followUps.length > 0 && (
@@ -160,7 +107,7 @@ export function ChatDrawer() {
                     {followUps.map((fu, i) => (
                       <button
                         key={i}
-                        onClick={() => handleSend(fu)}
+                        onClick={() => send(fu)}
                         className="text-[11px] px-3 py-1.5 rounded-full border border-border bg-card text-foreground/80 hover:border-primary/40 hover:bg-secondary/50 transition-colors"
                       >
                         {fu}
@@ -172,7 +119,7 @@ export function ChatDrawer() {
             )}
           </div>
 
-          <ChatInput onSend={handleSend} disabled={isStreaming} />
+          <ChatInput onSend={send} disabled={isStreaming} />
         </div>
       )}
     </>

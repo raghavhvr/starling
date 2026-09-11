@@ -18,6 +18,7 @@ import Financial from "./pages/Financial";
 import ContentCalendar from "./pages/ContentCalendar";
 import CreatorPortal from "./pages/CreatorPortal";
 import BulkUpload from "./pages/BulkUpload";
+import NestleAI from "./pages/NestleAI";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -50,6 +51,7 @@ const App = () => (
                       <Route path="/calendar" element={<ContentCalendar />} />
                       <Route path="/creator-portal" element={<CreatorPortal />} />
                       <Route path="/campaign/bulk" element={<BulkUpload />} />
+                      <Route path="/ai" element={<NestleAI />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </AppLayout>
