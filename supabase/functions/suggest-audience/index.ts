@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { assertLLMConfigured, llmChat, LLM_MODEL_LITE } from "../_shared/llm.ts";
+import { assertLLMConfigured, llmChat, parseJsonContent, LLM_MODEL_LITE } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,12 +63,8 @@ Respond ONLY with a JSON object, no markdown:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      parsed = { corrected: keyword, suggestions: [] };
-    }
+    const parsed = parseJsonContent<{ corrected?: string; suggestions?: unknown[] }>(content)
+      ?? { corrected: keyword, suggestions: [] };
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

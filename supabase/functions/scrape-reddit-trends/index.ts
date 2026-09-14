@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { assertLLMConfigured, llmChat, LLM_MODEL_LITE } from '../_shared/llm.ts'
+import { assertLLMConfigured, llmChat, parseJsonContent, LLM_MODEL_LITE } from '../_shared/llm.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -120,14 +120,8 @@ Respond ONLY with JSON, no markdown:
 
     const aiData = await aiResponse.json()
     const content = aiData.choices?.[0]?.message?.content
-    let parsed: { trends: any[] }
-
-    try {
-      parsed = JSON.parse(content)
-    } catch {
-      console.error('Failed to parse AI response:', content)
-      parsed = { trends: [] }
-    }
+    const parsed = parseJsonContent<{ trends: any[] }>(content) ?? { trends: [] }
+    if (!parsed.trends) console.error('Failed to parse AI response:', content)
 
     if (!parsed.trends?.length) {
       return new Response(JSON.stringify({ success: true, trends: [], message: 'AI found no trends' }), {
@@ -160,7 +154,7 @@ Respond ONLY with JSON, no markdown:
       })
     }
 
-    console.log(`Stored ${trendRows.length} beauty trends from Reddit`)
+    console.log(`Stored ${trendRows.length} food trends from Reddit`)
 
     return new Response(JSON.stringify({ success: true, trends: trendRows, count: trendRows.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
