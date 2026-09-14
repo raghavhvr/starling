@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { X, Sparkles } from "lucide-react";
+import { X, Sparkles, RotateCcw } from "lucide-react";
 import { ChatInput } from "./ChatInput";
 import { ChatMessage } from "./ChatMessage";
 import { ThinkingIndicator } from "./ThinkingIndicator";
@@ -8,7 +8,7 @@ import { useStarlingChat, CHAT_SUGGESTIONS, displayContent } from "@/hooks/useSt
 
 export function ChatDrawer() {
   const [open, setOpen] = useState(false);
-  const { messages, isStreaming, send, followUps } = useStarlingChat();
+  const { messages, isStreaming, send, reset, retry, needsRetry, followUps } = useStarlingChat();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
 
@@ -52,12 +52,24 @@ export function ChatDrawer() {
                 <p className="font-data text-[10px] text-muted-foreground tracking-wider">INFLUENCER & MEDIA ANALYTICS</p>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary/50 transition-colors"
-            >
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={reset}
+                  title="Start a fresh conversation"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary/50 transition-colors"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
+              <button
+                onClick={() => setOpen(false)}
+                title="Close — the conversation is kept"
+                className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary/50 transition-colors"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -100,6 +112,18 @@ export function ChatDrawer() {
                 ))}
 
                 {isStreaming && messages[messages.length - 1]?.role === "user" && <ThinkingIndicator />}
+
+                {needsRetry && (
+                  <div className="flex items-center gap-3 px-4 py-3 text-xs text-muted-foreground">
+                    <span>That answer was interrupted.</span>
+                    <button
+                      onClick={retry}
+                      className="rounded-full border border-primary/40 bg-card px-3 py-1.5 font-data text-[10px] tracking-wider text-primary transition-colors hover:bg-primary/5"
+                    >
+                      RETRY
+                    </button>
+                  </div>
+                )}
 
                 {/* Follow-up chips */}
                 {!isStreaming && followUps.length > 0 && (

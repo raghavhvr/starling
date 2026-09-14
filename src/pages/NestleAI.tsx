@@ -13,7 +13,7 @@ const SOURCES = [
 ];
 
 const NestleAI = () => {
-  const { messages, isStreaming, send, reset, followUps } = useStarlingChat();
+  const { messages, isStreaming, send, reset, retry, needsRetry, followUps } = useStarlingChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,6 +105,18 @@ const NestleAI = () => {
               ))}
 
               {isStreaming && messages[messages.length - 1]?.role === "user" && <ThinkingIndicator />}
+
+              {needsRetry && (
+                <div className="flex items-center gap-3 px-4 py-3 text-xs text-muted-foreground">
+                  <span>That answer was interrupted.</span>
+                  <button
+                    onClick={retry}
+                    className="rounded-full border border-primary/40 bg-card px-3 py-1.5 font-data text-[10px] tracking-wider text-primary transition-colors hover:bg-primary/5"
+                  >
+                    RETRY
+                  </button>
+                </div>
+              )}
 
               {!isStreaming && followUps.length > 0 && (
                 <div className="flex flex-wrap gap-2 px-4 py-3">
